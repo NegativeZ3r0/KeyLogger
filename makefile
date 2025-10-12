@@ -9,7 +9,7 @@ else
 endif
 
 CFLAGS_BEFORE := -Wall -Wextra -g
-CFLAGS_AFTER :=
+CFLAGS_AFTER := -lws2_32 -mwindows
 SRC_DIR := src
 BUILD_DIR := build
 
