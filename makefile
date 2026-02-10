@@ -11,23 +11,23 @@ endif
 CFLAGS_BEFORE := -Wall -Wextra -g
 CFLAGS_AFTER := -lws2_32 -mwindows
 SRC_DIR := src
-BUILD_DIR := build
+BIN_DIR := bin
 
 SRCS := $(SRC_DIR)/keylogger.c
-TARGET := $(BUILD_DIR)/KeyLogger.exe
+TARGET := keylogger
 
 .PHONY: all clean
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS) | $(BUILD_DIR)
-	$(CC) $(CFLAGS_BEFORE) $< -o $@ $(CFLAGS_AFTER)
+$(TARGET): $(SRCS) | $(BIN_DIR)
+	$(CC) $(CFLAGS_BEFORE) $< -o $(BIN_DIR)/$@.exe $(CFLAGS_AFTER)
 
-$(BUILD_DIR):
-	@echo "Creating build directory $(BUILD_DIR)/..."
-	$(MKDIR_CMD) $(BUILD_DIR)
+$(BIN_DIR):
+	@echo "Creating bin directory $(BIN_DIR)/..."
+	$(MKDIR_CMD) $(BIN_DIR)
 
 clean:
-	@echo "Cleaning up build directory..."
-	$(RM_CMD) $(BUILD_DIR)
+	@echo "Cleaning up bin directory..."
+	$(RM_CMD) $(BIN_DIR)
 	@echo "Clean complete."
