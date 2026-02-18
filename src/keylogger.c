@@ -13,7 +13,7 @@
 
 #define WM_APP_KEYDATA (WM_APP + 1)
 
-// function prototype
+// function declaration
 LRESULT LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 
 // structure to store key data
