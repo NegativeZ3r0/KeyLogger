@@ -7,10 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-// Change the following values to your server's hostname and port.
-#define SERVER_HOSTNAME "localhost"   // Hostname (domain name) of the receiving server
-#define SERVER_PORT 1025              // Port number on the receiving server
+// Change the following values to your machine's hostname and port.
+#define SERVER_HOSTNAME "localhost"   // Hostname (domain name) of the receiving machine
+#define SERVER_PORT 1025              // Port number on the receiving machine
 
 #define WM_APP_KEYDATA (WM_APP + 1)
 
